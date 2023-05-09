@@ -83,24 +83,54 @@ class Caption:
         """
         segments = []
         root = ElementTree.fromstring(xml_captions)
-        for i, child in enumerate(list(root)):
-            text = child.text or ""
-            caption = unescape(text.replace("\n", " ").replace("  ", " "),)
-            try:
-                duration = float(child.attrib["dur"])
-            except KeyError:
-                duration = 0.0
-            start = float(child.attrib["start"])
-            end = start + duration
-            sequence_number = i + 1  # convert from 0-indexed to 1.
-            line = "{seq}\n{start} --> {end}\n{text}\n".format(
-                seq=sequence_number,
-                start=self.float_to_srt_time_format(start),
-                end=self.float_to_srt_time_format(end),
-                text=caption,
-            )
-            segments.append(line)
+        i=0
+        for child in list(root.iter("body"))[0]:
+            if child.tag == 'p':
+                caption = ''
+                if len(list(child))==0:
+                    # instead of 'continue'
+                    caption = child.text
+                for s in list(child):
+                    if s.tag == 's':
+                        caption += ' ' + s.text
+                caption = unescape(caption.replace("\n", " ").replace("  ", " "),)
+                try:
+                    duration = float(child.attrib["d"])/1000.0
+                except KeyError:
+                    duration = 0.0
+                start = float(child.attrib["t"])/1000.0
+                end = start + duration
+                sequence_number = i + 1  # convert from 0-indexed to 1.
+                line = "{seq}\n{start} --> {end}\n{text}\n".format(
+                    seq=sequence_number,
+                    start=self.float_to_srt_time_format(start),
+                    end=self.float_to_srt_time_format(end),
+                    text=caption,
+                )
+                segments.append(line)
+                i += 1
         return "\n".join(segments).strip()
+    
+    def subtitle_clean(subtitle_text, save_path):
+        subtitle_text = subtitle_text.split('\n\n')
+        sent_num = 1
+
+        with open(save_path, 'w') as f:
+            for i in range((len(subtitle_text)-1) // 2):
+                _, temp_time, temp_text = subtitle_text[i*2].split('\n')
+                temp_start = temp_time.strip().split(' --> ')[0]
+                _, next_time, _ = subtitle_text[(i+1)*2].split('\n')
+                temp_end = next_time.strip().split(' --> ')[0]
+                f.write(str(sent_num) + '\n')
+                f.write(temp_start + ' --> ' + temp_end + '\n')
+                f.write(temp_text.strip() + '\n')
+                f.write('\n')
+                sent_num += 1
+
+            _, temp_time, temp_text = subtitle_text[-1].split('\n')
+            f.write(str(sent_num) + '\n')
+            f.write(temp_time + '\n')
+            f.write(temp_text.strip() + '\n')
 
     def download(
         self,
