@@ -84,6 +84,13 @@ class YouTube:
         self._author = None
         self._title = None
         self._publish_date = None
+        
+        # Add 
+        self._likes = None
+        self._dislikes = None
+        self._views = None
+        self._tags = None
+        self._subscribers = None
 
         self.use_oauth = use_oauth
         self.allow_oauth_cache = allow_oauth_cache
@@ -351,6 +358,80 @@ class YouTube:
             )
 
         return self._title
+    
+    @property
+    def likes(self) -> str:
+        """Get the video likes count.
+
+        :rtype: str
+        """
+        if self._likes:
+            return self._likes
+
+        try:
+            likes_label = self.vid_info['contents']['twoColumnWatchNextResults']['results']['results']['contents'][0]['videoPrimaryInfoRenderer']['videoActions']['menuRenderer']['topLevelButtons'][0]['toggleButtonRenderer']['defaultText']['accessibility']['accessibilityData']['label']
+            likes_str = likes_label.split(' ')[0].replace(',','')
+            self._likes = '0' if likes_str == 'No' else likes_str
+        except KeyError:
+            # Check_availability will raise the correct exception in most cases
+            #  if it doesn't, ask for a report.
+            self.check_availability()
+            raise exceptions.PytubeError(
+                (
+                    f'Exception while accessing title of {self.watch_url}. '
+                    'Please file a bug report at https://github.com/pytube/pytube'
+                )
+            )
+
+        return self._likes
+    
+    @property
+    def dislikes(self) -> str:
+        """Get the video dislikes count.
+
+        :rtype: str
+        """
+        if self._dislikes:
+            return self._dislikes
+
+        try:
+            self._title = self.vid_info['videoDetails']['dislikes']
+        except KeyError:
+            # Check_availability will raise the correct exception in most cases
+            #  if it doesn't, ask for a report.
+            self.check_availability()
+            raise exceptions.PytubeError(
+                (
+                    f'Exception while accessing title of {self.watch_url}. '
+                    'Please file a bug report at https://github.com/pytube/pytube'
+                )
+            )
+
+        return self._dislikes
+
+    @property
+    def subscribers(self) -> str:
+        """Get the video subscribers count.
+
+        :rtype: str
+        """
+        if self._subscribers:
+            return self._subscribers
+
+        try:
+            self._subscribers = self.vid_info['contents']['twoColumnWatchNextResults']['results']['results']['contents'][1]['videoSecondaryInfoRenderer']['owner']['videoOwnerRenderer']['subscriberCountText']['accessibility']['accessibilityData']['label']
+        except KeyError:
+            # Check_availability will raise the correct exception in most cases
+            #  if it doesn't, ask for a report.
+            self.check_availability()
+            raise exceptions.PytubeError(
+                (
+                    f'Exception while accessing title of {self.watch_url}. '
+                    'Please file a bug report at https://github.com/pytube/pytube'
+                )
+            )
+
+        return self._subscribers
 
     @title.setter
     def title(self, value):
